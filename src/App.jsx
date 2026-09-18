@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 
 const defaultData = {
@@ -562,7 +562,9 @@ function App() {
   const [isCheckingSession, setIsCheckingSession] = useState(true)
   const [isContentLoaded, setIsContentLoaded] = useState(false)
   const [contactForm, setContactForm] = useState({ name: '', email: '', service: '', message: '' })
+  const location = useLocation()
   const navigate = useNavigate()
+  const isAdminRoute = location.pathname === '/admin'
 
   useEffect(() => {
     const loadContent = async () => {
@@ -600,6 +602,12 @@ function App() {
   }, [content, isAdminAuthenticated, isContentLoaded])
 
   useEffect(() => {
+    if (!isAdminRoute) {
+      setIsCheckingSession(false)
+      return undefined
+    }
+
+    setIsCheckingSession(true)
     const checkSession = async () => {
       try {
         const response = await fetch('/api/session', { credentials: 'include' })
@@ -613,7 +621,8 @@ function App() {
     }
 
     checkSession()
-  }, [])
+    return undefined
+  }, [isAdminRoute])
 
   useEffect(() => {
     const revealItems = document.querySelectorAll('.reveal')
@@ -673,14 +682,10 @@ function App() {
     navigate('/admin')
   }
 
-  if (isCheckingSession) {
-    return <div className="loading-screen">Checking access...</div>
-  }
-
   return (
     <Routes>
       <Route path="/" element={<PublicPage content={content} contactForm={contactForm} setContactForm={setContactForm} handleBookingSubmit={handleBookingSubmit} />} />
-      <Route path="/admin" element={isAdminAuthenticated ? <AdminDashboard content={content} setContent={setContent} onLogout={handleAdminLogout} /> : <AdminLogin onLogin={handleAdminLogin} />} />
+      <Route path="/admin" element={isCheckingSession ? <div className="loading-screen">Checking access...</div> : isAdminAuthenticated ? <AdminDashboard content={content} setContent={setContent} onLogout={handleAdminLogout} /> : <AdminLogin onLogin={handleAdminLogin} />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
